@@ -43,6 +43,8 @@
 
 import http.server
 import requests
+import threading
+from socketserver import ThreadingMixIn
 from urllib.parse import unquote, parse_qs
 import os
 
@@ -66,6 +68,9 @@ form = '''<!DOCTYPE html>
 {}
 </pre>
 '''
+
+class ThreadHTTPServer(ThreadingMixIn, http.server.HTTPServer):
+    "This is a class that supports thread-based concurrency"
 
 
 def CheckURI(uri, timeout=5):
@@ -135,9 +140,10 @@ class Shortener(http.server.BaseHTTPRequestHandler):
         if CheckURI(longuri):
             # This URI is good!  Remember it under the specified name.
             memory[shortname] = longuri
+            print("saved uri")
 
             # 4. Serve a redirect to the root page (the form).
-            self.response(303)
+            self.send_response(303)
             self.send_header('Location', '/')
             self.end_headers()
         else:
@@ -150,5 +156,5 @@ class Shortener(http.server.BaseHTTPRequestHandler):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     server_address = ('', port)
-    httpd = http.server.HTTPServer(server_address, Shortener)
+    httpd = ThreadHTTPServer(server_address, Shortener)
     httpd.serve_forever()
